@@ -16,10 +16,7 @@ class Item:
         self.y += self.velocidade
 
     def desenhar(self, tela):
-        if self.tipo == "verde":
-            cor = (0, 255, 0)
-        else:
-            cor = (255, 0, 0)
+        cor = (0, 255, 0) if self.tipo == "verde" else (255, 0, 0)
         pygame.draw.circle(tela, cor, (self.x, self.y), self.raio)
 
     def get_rect(self):
@@ -29,18 +26,22 @@ class Item:
 def tela_jogo(tela):
     largura_tela, altura_tela = 800, 600
 
+    # Fundo
     fundo = pygame.image.load("assets/fundo_jogo.jpg").convert()
     fundo = pygame.transform.scale(fundo, (largura_tela, altura_tela))
 
+    # Máscara
     mascara = pygame.Surface((largura_tela, altura_tela))
-    mascara.set_alpha(190)  
-    mascara.fill((0, 0, 0)) 
+    mascara.set_alpha(190)
+    mascara.fill((0, 0, 0))
 
+    # Personagem
     personagem_image = pygame.image.load("assets/personagem_correndo.png")
     jogador = personagem.Personagem(personagem_image)
 
     clock = pygame.time.Clock()
 
+    # Animação personagem
     animacao_list_direita = []
     animacao_list_esquerda = []
     animacao_steps = 6
@@ -54,26 +55,26 @@ def tela_jogo(tela):
 
     frame = 0
     last_update = pygame.time.get_ticks()
-    animacao_colldown = 100  
+    animacao_cooldown = 100  
 
     rodando = True
-    andando = False
     olhando_esquerda = False
 
-    x_pos = 400
-    y_pos = 250
+    x_pos, y_pos = 400, 250
     velocidade = 5
-
     largura_sprite = animacao_list_direita[0].get_width()
     altura_sprite = animacao_list_direita[0].get_height()
 
-    # Lista de itens
+    # Itens
     itens = []
     item_timer = 0
     spawn_cooldown = 1000  # ms
 
-    # Pontuação
+    # Pontuação e vidas
     pontos = 0
+    vidas = 5
+    quadrado_tamanho = 30
+    espaco = 10
     fonte = pygame.font.SysFont(None, 36)
 
     while rodando:
@@ -89,61 +90,60 @@ def tela_jogo(tela):
             x_pos += velocidade
             andando = True
             olhando_esquerda = False
-
         elif teclas[pygame.K_LEFT]:
             x_pos -= velocidade
             andando = True
             olhando_esquerda = True
 
-        if x_pos < 0:
-            x_pos = 0
-        if x_pos > largura_tela - largura_sprite:
-            x_pos = largura_tela - largura_sprite
+        # Limites da tela
+        x_pos = max(0, min(x_pos, largura_tela - largura_sprite))
 
+        # Atualiza frame da animação
         if andando:
             current_time = pygame.time.get_ticks()
-            if current_time - last_update >= animacao_colldown:
+            if current_time - last_update >= animacao_cooldown:
                 frame = (frame + 1) % animacao_steps
                 last_update = current_time
         else:
             frame = 0
 
-        # --- Spawn de itens ---
+        # Spawn de itens
         current_time = pygame.time.get_ticks()
         if current_time - item_timer >= spawn_cooldown:
             itens.append(Item(largura_tela))
             item_timer = current_time
 
-        # Atualiza itens
+        # Atualiza itens e colisões
+        rect_jogador = pygame.Rect(
+            x_pos,
+            y_pos + altura_sprite // 2,
+            largura_sprite,
+            altura_sprite // 2
+        )
+
         for item in itens[:]:
             item.update()
             if item.y > altura_tela:
                 itens.remove(item)
+                continue
 
-        # --- Colisão ---
-        rect_jogador = pygame.Rect(
-            x_pos,
-            y_pos + altura_sprite // 2,   # começa no meio do personagem
-            largura_sprite,
-            altura_sprite // 2            # só metade inferior
-        )
-        for item in itens[:]:
             if rect_jogador.colliderect(item.get_rect()):
                 if item.tipo == "verde":
                     pontos += 1
                 else:
-                    pontos -= 1
+                    vidas -= 1  # perde um quadrado
                 itens.remove(item)
+
+        # Verifica fim de jogo
+        if vidas <= 0:
+            print("Fim de jogo!")
+            rodando = False
 
         # Render
         tela.blit(fundo, (0, 0))
         tela.blit(mascara, (0, 0))
 
-        if olhando_esquerda:
-            imagem = animacao_list_esquerda[frame]
-        else:
-            imagem = animacao_list_direita[frame]
-
+        imagem = animacao_list_esquerda[frame] if olhando_esquerda else animacao_list_direita[frame]
         tela.blit(imagem, (x_pos, y_pos))
 
         for item in itens:
@@ -152,6 +152,12 @@ def tela_jogo(tela):
         # Pontuação
         texto = fonte.render(f"Pontos: {pontos}", True, (255, 255, 255))
         tela.blit(texto, (10, 10))
+
+        # Quadrados (vidas) no canto inferior direito
+        for i in range(vidas):
+            x_q = largura_tela - (quadrado_tamanho + espaco) * (i + 1)
+            y_q = altura_tela - quadrado_tamanho - espaco
+            pygame.draw.rect(tela, (255, 0, 0), (x_q, y_q, quadrado_tamanho, quadrado_tamanho))
 
         pygame.display.flip()
         clock.tick(60)
