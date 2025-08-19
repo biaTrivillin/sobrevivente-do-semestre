@@ -45,7 +45,7 @@ def tela_jogo(tela):
     animacao_list_esquerda = []
     animacao_steps = 6
     for x in range(animacao_steps):
-        img = jogador.get_image(x, 24, 48, 4, BLACK_BG)
+        img = jogador.get_image(x, 24, 48, 5, BLACK_BG)
         animacao_list_direita.append(img)
 
         img_flip = pygame.transform.flip(img, True, False)
@@ -61,7 +61,7 @@ def tela_jogo(tela):
     olhando_esquerda = False
 
     x_pos = 400
-    y_pos = 400
+    y_pos = 250
     velocidade = 5
 
     largura_sprite = animacao_list_direita[0].get_width()
