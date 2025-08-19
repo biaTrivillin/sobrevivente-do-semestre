@@ -1,0 +1,30 @@
+# Arquivos compilados do Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ambiente virtual
+.env
+.venv
+env/
+venv/
+
+# Configurações de IDEs
+.vscode/
+.idea/
+*.swp
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Arquivos temporários
+*.tmp
+
+# Build (se for gerar executável com pyinstaller)
+build/
+dist/
+*.spec
