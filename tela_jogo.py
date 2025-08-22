@@ -12,23 +12,71 @@ class Item:
         self.tipo = random.choice(["verde", "vermelho"])  # verde = coletar, vermelho = desviar
         self.raio = 15
 
+        # Carrega a imagem do item verde
+        if self.tipo == "verde":
+            self.imagem = pygame.image.load("assets/cup-of-coffee.png").convert_alpha()
+            self.imagem = pygame.transform.scale(self.imagem, (70, 70))
+        else:
+            self.imagem = None  # vermelhos continuarão como círculo
+
     def update(self):
         self.y += self.velocidade
 
     def desenhar(self, tela):
-        cor = (0, 255, 0) if self.tipo == "verde" else (255, 0, 0)
-        pygame.draw.circle(tela, cor, (self.x, self.y), self.raio)
+        if self.tipo == "verde" and self.imagem:
+            tela.blit(self.imagem, (self.x - self.raio, self.y - self.raio))
+        else:
+            cor = (255, 0, 0)  # vermelho
+            pygame.draw.circle(tela, cor, (self.x, self.y), self.raio)
 
     def get_rect(self):
         return pygame.Rect(self.x - self.raio, self.y - self.raio, self.raio * 2, self.raio * 2)
 
+class TextoAnimado:
+    def __init__(self, x, y, texto, cor=(255, 255, 0), duracao=1000):
+        self.x = x
+        self.y = y
+        self.texto = texto
+        self.cor = cor
+        self.duracao = duracao  # tempo em ms
+        self.start_time = pygame.time.get_ticks()
+        self.alpha = 255  # opacidade inicial
+        self.fonte = pygame.font.SysFont(None, 40)
+
+    def update(self):
+        # Move o texto para cima
+        self.y -= 1
+        # Calcula o tempo decorrido
+        elapsed = pygame.time.get_ticks() - self.start_time
+        # Faz o texto desaparecer gradualmente
+        self.alpha = max(255 - int(255 * (elapsed / self.duracao)), 0)
+
+    def desenhar(self, tela):
+        if self.alpha > 0:
+            img = self.fonte.render(self.texto, True, self.cor)
+            img.set_alpha(self.alpha)
+            tela.blit(img, (self.x, self.y))
+
+    def terminou(self):
+        return self.alpha <= 0
+
 
 def tela_jogo(tela):
     largura_tela, altura_tela = 800, 600
+    textos_animados = []  # fora do loop principal
+
+
+    # Tamanho e espaçamento dos corações
+    quadrado_tamanho = 50
+    espaco = 15  # espaço entre corações
 
     # Fundo
     fundo = pygame.image.load("assets/fundo_jogo.jpg").convert()
     fundo = pygame.transform.scale(fundo, (largura_tela, altura_tela))
+
+    # Coração (vida)
+    coracao_img = pygame.image.load("assets/vida.png").convert_alpha()
+    coracao_img = pygame.transform.scale(coracao_img, (quadrado_tamanho, quadrado_tamanho))
 
     # Máscara
     mascara = pygame.Surface((largura_tela, altura_tela))
@@ -73,8 +121,6 @@ def tela_jogo(tela):
     # Pontuação e vidas
     pontos = 0
     vidas = 5
-    quadrado_tamanho = 30
-    espaco = 10
     fonte = pygame.font.SysFont(None, 36)
 
     while rodando:
@@ -130,9 +176,37 @@ def tela_jogo(tela):
             if rect_jogador.colliderect(item.get_rect()):
                 if item.tipo == "verde":
                     pontos += 1
+                    textos_possiveis = [
+                        "Delícia!", 
+                        "Super Energia!", 
+                        "Café Power!", 
+                        "Mais um gole!", 
+                        "Uhul!", 
+                        "Bora lá!", 
+                        "Explosão de café!", 
+                        "Energizado!", 
+                        "Café na veia!", 
+                        "Full power!"
+                    ]
+                    texto = random.choice(textos_possiveis)
+                    textos_animados.append(TextoAnimado(item.x, item.y, texto, cor=(255, 255, 0)))  # amarelo
                 else:
-                    vidas -= 1  # perde um quadrado
+                    vidas -= 1
+                    textos_vermelhos = [
+                        "Ai meu Deus!", 
+                        "Cuidado!", 
+                        "Ops!", 
+                        "Que dor!", 
+                        "Ahhh!", 
+                        "Socorro!", 
+                        "Perdi!", 
+                        "Nãoooo!"
+                    ]
+                    texto = random.choice(textos_vermelhos)
+                    textos_animados.append(TextoAnimado(item.x, item.y, texto, cor=(255, 0, 0)))  # vermelho
                 itens.remove(item)
+
+
 
         # Verifica fim de jogo
         if vidas <= 0:
@@ -153,11 +227,18 @@ def tela_jogo(tela):
         texto = fonte.render(f"Pontos: {pontos}", True, (255, 255, 255))
         tela.blit(texto, (10, 10))
 
-        # Quadrados (vidas) no canto inferior direito
+        # Vidas (corações) no canto inferior direito
         for i in range(vidas):
-            x_q = largura_tela - (quadrado_tamanho + espaco) * (i + 1)
-            y_q = altura_tela - quadrado_tamanho - espaco
-            pygame.draw.rect(tela, (255, 0, 0), (x_q, y_q, quadrado_tamanho, quadrado_tamanho))
+            x_q = largura_tela - (quadrado_tamanho + espaco) * (i + 1) - 20  # margem de 20px
+            y_q = altura_tela - quadrado_tamanho - 20  # margem de 20px
+            tela.blit(coracao_img, (x_q, y_q))
+
+        for texto_animado in textos_animados[:]:
+            texto_animado.update()
+            texto_animado.desenhar(tela)
+            if texto_animado.terminou():
+                textos_animados.remove(texto_animado)
+
 
         pygame.display.flip()
         clock.tick(60)
